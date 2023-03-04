@@ -1,11 +1,9 @@
 package controllers
 
 import (
-	"fmt"
 	"math/rand"
 	"password_generator/global"
 	"strconv"
-	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -19,7 +17,7 @@ var Symbols bool
 func Home(c echo.Context) error {
 	var err error
 	var counter int = 0
-
+	checkPos := [4]bool{false, false, false, false}
 	global.Password = ""
 
 	if c.FormValue("length") != "" {
@@ -36,12 +34,12 @@ func Home(c echo.Context) error {
 		Length = 8
 	}
 
-
 	if len(c.FormValue("uppercase")) == 0 {
 		Uppercase = false
 	} else {
 		Uppercase = true
 
+		checkPos[0] = true
 		counter++
 	}
 
@@ -50,6 +48,7 @@ func Home(c echo.Context) error {
 	} else {
 		Lowercase = true
 
+		checkPos[1] = true
 		counter++
 	}
 
@@ -58,6 +57,7 @@ func Home(c echo.Context) error {
 	} else {
 		Numbers = true
 
+		checkPos[2] = true
 		counter++
 	}
 
@@ -66,18 +66,32 @@ func Home(c echo.Context) error {
 	} else {
 		Symbols = true
 
+		checkPos[3] = true
 		counter++
 	}
 
-	generatePassword(counter)
+	generatePassword(counter, checkPos)
+
+	c.JSON(200, "generated password: " + global.Password)
 
 	return nil
 }
 
-func generatePassword(max int) {
+func generatePassword(max int, pos [4]bool) {
 
 	for i := 0; i < Length; i++ {
 		field := randField(max)
+
+		for j := 0; j < 4; j++ {
+			if pos[j] && field == 0 {
+				field = j
+				break
+			} else {
+				if pos[j] && field > 0 {
+					field--
+				}
+			}
+		}
 
 		switch field {
 		case 0:
@@ -106,17 +120,15 @@ func generatePassword(max int) {
 			}
 
 		}
-		
+
 	}
 
-	fmt.Println("Password: " + global.Password)
 }
 
 func randField(max int) int {
 	values := make([]int, 30)
 
 	for i := 0; i < 30; i++ {
-		rand.Seed(time.Now().UnixNano())
 		values[i] = rand.Intn(max)
 	}
 
