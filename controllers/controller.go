@@ -8,79 +8,61 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var Length int
-var Uppercase bool
-var Lowercase bool
-var Numbers bool
-var Symbols bool
+var (
+	Uppercase = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	Lowercase = []rune("abcdefghijklmnopqrstuvwxyz")
+	Numbers   = []rune("0123456789")
+	Symbols   = []rune("!@#$%^&*()_+{}:\"<>?,./;'[]\\|")
+)
 
 func Home(c echo.Context) error {
-	var err error
-	var counter int = 0
-	checkPos := [4]bool{false, false, false, false}
+	var counter int
+	checkPos := [4]bool{}
 	global.Password = ""
 
-	if c.FormValue("length") != "" {
-		Length, err = strconv.Atoi(c.FormValue("length"))
-		if err != nil {
-			return err
-		}
-
-		if Length < 8 {
-			Length = 8
-		}
-
-	} else {
-		Length = 8
+	length, err := strconv.Atoi(c.FormValue("length"))
+	if err != nil || length < 8 {
+		length = 8
 	}
 
-	if len(c.FormValue("uppercase")) == 0 {
-		Uppercase = false
-	} else {
-		Uppercase = true
-
+	if c.FormValue("uppercase") != "" {
+		global.Uppercase = Uppercase
 		checkPos[0] = true
 		counter++
 	}
 
-	if len(c.FormValue("lowercase")) == 0 {
-		Lowercase = false
-	} else {
-		Lowercase = true
-
+	if c.FormValue("lowercase") != "" {
+		global.Lowercase = Lowercase
 		checkPos[1] = true
 		counter++
 	}
 
-	if len(c.FormValue("numbers")) == 0 {
-		Numbers = false
-	} else {
-		Numbers = true
-
+	if c.FormValue("numbers") != "" {
+		global.Numbers = Numbers
 		checkPos[2] = true
 		counter++
 	}
 
-	if len(c.FormValue("symbols")) == 0 {
-		Symbols = false
-	} else {
-		Symbols = true
-
+	if c.FormValue("symbols") != "" {
+		global.Symbols = Symbols
 		checkPos[3] = true
 		counter++
 	}
 
-	generatePassword(counter, checkPos)
+	if counter == 0 {
+		return c.JSON(200, "no options selected")
+	}
 
-	c.JSON(200, "generated password: " + global.Password)
+	generatePassword(length, counter, checkPos)
 
-	return nil
+	return c.JSON(200, "generated password: "+global.Password)
 }
 
-func generatePassword(max int, pos [4]bool) {
+func generatePassword(length, max int, pos [4]bool) {
+	runes := make([]rune, length)
 
-	for i := 0; i < Length; i++ {
-		field := randField(max)
+	for i := 0; i < length; i++ {
+		field := randomField(max)
 
 		for j := 0; j < 4; j++ {
 			if pos[j] && field == 0 {
@@ -95,42 +77,41 @@ func generatePassword(max int, pos [4]bool) {
 
 		switch field {
 		case 0:
-			if Uppercase {
-				global.Password += string(global.Uppercase[rand.Intn(len(global.Uppercase))])
+			if len(Uppercase) > 0 {
+				runes[i] = Uppercase[rand.Intn(len(Uppercase))]
 			} else {
 				i--
 			}
 		case 1:
-			if Lowercase {
-				global.Password += string(global.Lowercase[rand.Intn(len(global.Lowercase))])
+			if len(Lowercase) > 0 {
+				runes[i] = Lowercase[rand.Intn(len(Lowercase))]
 			} else {
 				i--
 			}
 		case 2:
-			if Numbers {
-				global.Password += string(global.Numbers[rand.Intn(len(global.Numbers))])
+			if len(Numbers) > 0 {
+				runes[i] = Numbers[rand.Intn(len(Numbers))]
 			} else {
 				i--
 			}
 		case 3:
-			if Symbols {
-				global.Password += string(global.Symbols[rand.Intn(len(global.Symbols))])
+			if len(Symbols) > 0 {
+				runes[i] = Symbols[rand.Intn(len(Symbols))]
 			} else {
 				i--
 			}
-
 		}
-
 	}
 
+	global.Password = string(runes)
 }
 
-func randField(max int) int {
-	values := make([]int, 30)
-
-	for i := 0; i < 30; i++ {
+func randomField(max int) int {
+	values := make([]int, 100)
+	
+	for i := 0; i < 100; i++ {
 		values[i] = rand.Intn(max)
 	}
 
-	return values[rand.Intn(30)]
+	return values[rand.Intn(len(values))]
 }
